@@ -31,15 +31,30 @@ type AreaProperties = {
   occurrence_count: number
 }
 
-// Aligned with the "Score preditivo" legend in DiagnosticoView.
-const SCORE_COLOR: unknown[] = [
-  "step",
-  ["coalesce", ["get", "score"], 0],
-  "#16a34a",
-  50, "#ca8a04",
-  70, "#ea580c",
-  85, "#dc2626",
-]
+// Relative ramp: stretches green→yellow→orange→red across whatever score
+// range the current response actually contains, so the lowest area is always
+// fully green and the highest fully red even when scores cluster.
+function relativeColorExpression(scores: number[]): unknown[] {
+  if (scores.length === 0) {
+    return ["literal", "#16a34a"]
+  }
+  const min = Math.min(...scores)
+  const max = Math.max(...scores)
+  const range = max - min
+  if (range === 0) {
+    // All polygons share the same score — paint them the middle band.
+    return ["literal", "#ca8a04"]
+  }
+  return [
+    "interpolate",
+    ["linear"],
+    ["coalesce", ["get", "score"], min],
+    min,                      "#16a34a",
+    min + range * 0.33,       "#ca8a04",
+    min + range * 0.66,       "#ea580c",
+    max,                      "#dc2626",
+  ]
+}
 
 function toGeoJSON(
   results: AreaForcaScore[],
@@ -70,9 +85,13 @@ export function AreasLayer({ startDate, endDate }: Props) {
   useEffect(() => {
     if (!results) return
     const data = toGeoJSON(results)
+    const color = relativeColorExpression(results.map((r) => r.score))
     const source = map.getSource(SOURCE_ID) as GeoJSONSource | undefined
     if (source) {
       source.setData(data)
+      if (map.getLayer(FILL_LAYER_ID)) {
+        map.setPaintProperty(FILL_LAYER_ID, "fill-color", color)
+      }
       return
     }
     map.addSource(SOURCE_ID, { type: "geojson", data })
@@ -81,7 +100,7 @@ export function AreasLayer({ startDate, endDate }: Props) {
       type: "fill",
       source: SOURCE_ID,
       paint: {
-        "fill-color": SCORE_COLOR,
+        "fill-color": color,
         "fill-opacity": 0.45,
       },
     })
