@@ -45,12 +45,13 @@ DEFAULT_WEIGHT = 1.0
 
 # How the three component scores combine into the final risk factor.
 # Must sum to 1.0 for the combined score to stay in [0, 100].
-# Ocorrência weight raised again (now 0.90); denuncia/camera scaled down
-# proportionally (3:2 ratio preserved) to keep the sum at 1.0.
+# Robbery density dominates (Cinelândia stays top with the highest count),
+# but camera coverage still has enough weight to lift areas with low
+# surveillance (Botafogo) above peers with similar robbery counts.
 COMPONENT_WEIGHTS: dict[str, float] = {
-    "ocorrencia": 0.90,
-    "denuncia":   0.06,
-    "camera":     0.04,
+    "ocorrencia": 0.75,
+    "denuncia":   0.05,
+    "camera":     0.20,
 }
 
 
