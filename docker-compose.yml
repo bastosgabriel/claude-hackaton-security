@@ -1,7 +1,6 @@
 services:
   db:
     image: postgis/postgis:16-3.4
-    container_name: hackaton_postgis
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:-hackaton}
@@ -17,5 +16,44 @@ services:
       timeout: 5s
       retries: 10
 
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-insecure-key-change-me}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      DB_NAME: ${DB_NAME:-hackaton}
+      DB_USER: ${DB_USER:-hackaton}
+      DB_PASS: ${DB_PASS:-hackaton}
+      DB_HOST: db
+      DB_PORT: 5432
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      - backend
+
 volumes:
   postgis_data:
+  frontend_node_modules:

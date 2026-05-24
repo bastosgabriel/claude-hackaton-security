@@ -1,0 +1,16 @@
+.git
+.gitignore
+.claude
+.env
+.venv
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.python-version
+frontend/node_modules
+frontend/.next
+frontend/.turbo
+data
+*.png
+devdata
