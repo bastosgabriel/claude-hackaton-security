@@ -75,7 +75,6 @@ class OcorrenciaSerializer(serializers.Serializer):
     lat = serializers.SerializerMethodField()
     lng = serializers.SerializerMethodField()
     data = serializers.DateField()
-    hora = serializers.TimeField(allow_null=True)
     desc_delito = serializers.CharField()
     aisp = serializers.IntegerField(allow_null=True)
     risp = serializers.IntegerField(allow_null=True)

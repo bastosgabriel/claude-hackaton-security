@@ -44,8 +44,6 @@ def make_oc(
 ):
     return Ocorrencia.objects.create(
         id_criptografado=pk,
-        ano=data.year,
-        mes=data.month,
         data=data,
         desc_delito=desc,
         aisp=5,

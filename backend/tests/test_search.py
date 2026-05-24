@@ -16,8 +16,6 @@ URL = "/api/ocorrencias/search/"
 def make_oc(pk: str, lat: float, lng: float, data: dt.date, desc: str = "Roubo a transeunte", aisp: int = 5):
     return Ocorrencia.objects.create(
         id_criptografado=pk,
-        ano=data.year,
-        mes=data.month,
         data=data,
         desc_delito=desc,
         aisp=aisp,
@@ -99,29 +97,6 @@ def test_date_range_inverted(client, db):
     }
     r = client.post(URL, payload, format="json")
     assert r.status_code == 400
-
-
-def test_null_data_rows_excluded(client, seeded):
-    Ocorrencia.objects.create(
-        id_criptografado="f" * 64,
-        ano=2023,
-        mes=3,
-        data=None,
-        desc_delito="Roubo a transeunte",
-        aisp=5,
-        risp=1,
-        locf="Rua Sem Data",
-        location=Point(-43.18, -22.91, srid=4326),
-    )
-    payload = {
-        "polygon": _box(-22.95, -22.90, -43.22, -43.17),
-        "start_date": "2023-01-01",
-        "end_date": "2023-12-31",
-    }
-    r = client.post(URL, payload, format="json")
-    body = r.json()
-    ids = {row["id"] for row in body["results"]}
-    assert "f" * 64 not in ids
 
 
 def test_pagination_caps_results(client, db):

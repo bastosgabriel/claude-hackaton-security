@@ -98,36 +98,52 @@ def parse_datetime(raw: object, fmt: str) -> dt.datetime | None:
     return make_aware(parsed) if is_naive(parsed) else parsed
 
 
-def parse_date_ddmmyyyy(raw: object, ano: int | None) -> dt.date | None:
-    """Parse DD/MM/YYYY; reject if year doesn't match ``ano`` or is implausible."""
+def _parse_dmy(raw: object) -> dt.date | None:
+    """Parse a DD/MM/YYYY string. Does NOT validate the year — callers that
+    care about year sanity should check separately. (We deliberately accept
+    typo'd years like 1924 here because we only use the day/month.)
+    """
     if raw is None or _is_nan(raw):
         return None
     s = str(raw).strip()
     if not s:
         return None
     try:
-        parsed = dt.datetime.strptime(s, "%d/%m/%Y").date()
+        return dt.datetime.strptime(s, "%d/%m/%Y").date()
     except ValueError:
         return None
-    if not (YEAR_MIN <= parsed.year <= dt.date.today().year + 1):
-        return None
-    if ano is not None and parsed.year != ano:
-        return None
-    return parsed
 
 
-def parse_time(raw: object) -> dt.time | None:
-    if raw is None or _is_nan(raw):
+def reconcile_ocorrencia_date(
+    ano: int | None,
+    mes: int | None,
+    raw_data: object,
+) -> dt.date | None:
+    """Build a single ``date`` from the redundant ano/mes/data CSV columns.
+
+    The source CSV has typos in `data` (~2% of rows show e.g. 1924 instead of
+    2024). Strategy: trust `ano`+`mes` as the source of truth (they're the
+    curated grouping fields and internally consistent), pull day-of-month
+    from `data` only when its month matches `mes`. Day defaults to 1 when
+    the `data` column conflicts.
+
+    Returns None only when `ano`+`mes` are themselves unusable.
+    """
+    if ano is None or mes is None:
         return None
-    s = str(raw).strip()
-    if not s:
+    if not (YEAR_MIN <= ano <= dt.date.today().year + 1):
         return None
-    for fmt in ("%H:%M:%S", "%H:%M"):
-        try:
-            return dt.datetime.strptime(s, fmt).time()
-        except ValueError:
-            continue
-    return None
+    if not (1 <= mes <= 12):
+        return None
+    day = 1
+    parsed = _parse_dmy(raw_data)
+    if parsed is not None and parsed.month == mes:
+        day = parsed.day
+    try:
+        return dt.date(ano, mes, day)
+    except ValueError:
+        # e.g. day=31 for a 30-day month picked up from a typo'd `data`.
+        return dt.date(ano, mes, 1)
 
 
 def _resolve(path: str | Path) -> Path:
@@ -157,7 +173,8 @@ def load_ocorrencias(
 
     stats = {
         "read": 0, "imported": 0,
-        "skipped_no_coord": 0, "skipped_no_id": 0, "date_nulled": 0,
+        "skipped_no_coord": 0, "skipped_no_id": 0, "skipped_no_date": 0,
+        "date_day_synthetic": 0,
     }
     reader = pd.read_csv(
         path, chunksize=10_000, dtype=str,
@@ -176,22 +193,25 @@ def load_ocorrencias(
             if lat is None or lon is None:
                 stats["skipped_no_coord"] += 1
                 continue
-            ano = safe_int(row.get("ano"))
-            data = parse_date_ddmmyyyy(row.get("data"), ano)
-            if data is None and row.get("data"):
-                stats["date_nulled"] += 1
+            data = reconcile_ocorrencia_date(
+                safe_int(row.get("ano")),
+                safe_int(row.get("mes")),
+                row.get("data"),
+            )
+            if data is None:
+                stats["skipped_no_date"] += 1
+                continue
+            if data.day == 1:
+                # Track how often we fell back to the synthetic day.
+                stats["date_day_synthetic"] += 1
             objs.append(Ocorrencia(
                 id_criptografado=pk,
-                ano=ano or 0,
-                mes=safe_int(row.get("mes")) or 0,
                 data=data,
-                hora=parse_time(row.get("hora")),
                 delito=safe_int(row.get("delito")),
                 desc_delito=safe_str(row.get("desc_delito"), 120),
                 aisp=safe_int(row.get("aisp")),
                 risp=safe_int(row.get("risp")),
                 locf=safe_str(row.get("locf"), 255),
-                dia_semana=safe_str(row.get("dia_semana"), 20),
                 location=Point(lon, lat, srid=4326),
             ))
             if limit is not None and stats["read"] >= limit:
