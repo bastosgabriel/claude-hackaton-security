@@ -36,8 +36,12 @@ export function MapCanvas({ initialView, onMoveEnd, children }: Props) {
 
     return () => {
       alive = false
+      // Unmount children first (they will run their cleanups against a
+      // still-alive map), then destroy the map on the next microtask.
+      // Doing instance.remove() synchronously here wipes map.style before
+      // children's effect cleanups get a chance to removeLayer/removeSource.
       setMap(null)
-      instance.remove()
+      queueMicrotask(() => instance.remove())
     }
   }, [initialView])
 

@@ -49,9 +49,13 @@ export function H3Layer() {
 
     return () => {
       map.off("moveend", refresh)
-      if (map.getLayer(LINE_LAYER_ID)) map.removeLayer(LINE_LAYER_ID)
-      if (map.getLayer(FILL_LAYER_ID)) map.removeLayer(FILL_LAYER_ID)
-      if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID)
+      try {
+        if (map.getLayer(LINE_LAYER_ID)) map.removeLayer(LINE_LAYER_ID)
+        if (map.getLayer(FILL_LAYER_ID)) map.removeLayer(FILL_LAYER_ID)
+        if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID)
+      } catch {
+        // Map was already removed (style is gone). Nothing to clean up.
+      }
     }
   }, [map])
 
