@@ -1,7 +1,7 @@
 # TerritorI.A.
 
 
-[Ver o app](https://5d1d-200-209-214-250.ngrok-free.app/)
+[Abrir o app](https://5d1d-200-209-214-250.ngrok-free.app/)
 
 [Video de apresentaçao](https://drive.google.com/drive/folders/1QqMWTR7PxfxCDJf2UbKmQgBpXuTWT8Dh?usp=drive_link)
 
