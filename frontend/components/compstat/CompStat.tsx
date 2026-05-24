@@ -1,9 +1,10 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 
 import { useIsClient } from "@/hooks/use-is-client"
-import { REGIONS, agentsFor } from "@/lib/compstat/regions"
+import { fetchRegions, type RegionsResponse } from "@/lib/api/regions"
 
 import { AvaliacaoView } from "./AvaliacaoView"
 import { DiagnosticoView } from "./DiagnosticoView"
@@ -38,13 +39,22 @@ const TABS: WeekTab[] = [
   },
 ]
 
+const START_DATE = "2020-01-01"
+const END_DATE = "2026-01-01"
+
 export function CompStat() {
   const isClient = useIsClient()
   const [view, setView] = useState<WeekView>("avaliacao")
-  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set())
+  const [selected, setSelected] = useState<ReadonlySet<number>>(() => new Set())
   const [toastShown, setToastShown] = useState(false)
 
-  const toggleSelect = (id: string) => {
+  const regionsQuery = useQuery<RegionsResponse>({
+    queryKey: ["regions", START_DATE, END_DATE],
+    queryFn: ({ signal }) => fetchRegions(START_DATE, END_DATE, signal),
+  })
+  const regions = regionsQuery.data?.results ?? []
+
+  const toggleSelect = (id: number) => {
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -55,16 +65,18 @@ export function CompStat() {
 
   const agentsAllocated = useMemo(
     () =>
-      REGIONS.filter((r) => selected.has(r.id)).reduce(
-        (sum, r) => sum + agentsFor(r),
-        0,
-      ),
-    [selected],
+      regions
+        .filter((r) => selected.has(r.id))
+        .reduce(
+          (sum, r) => sum + r.actions.reduce((s, a) => s + a.agents, 0),
+          0,
+        ),
+    [regions, selected],
   )
 
   const handlePrioritize = () => {
-    if (selected.size === 0) {
-      setSelected(new Set(REGIONS.slice(0, 3).map((r) => r.id)))
+    if (selected.size === 0 && regions.length > 0) {
+      setSelected(new Set(regions.slice(0, 3).map((r) => r.id)))
     }
     setToastShown(true)
     window.setTimeout(() => setToastShown(false), 2400)
@@ -82,10 +94,12 @@ export function CompStat() {
 
         {view === "prereuniao" && (
           <DiagnosticoView
+            regions={regions}
+            isLoading={regionsQuery.isLoading}
             selected={selected}
             onToggleSelect={toggleSelect}
-            startDate="2020-01-01"
-            endDate="2026-01-01"
+            startDate={START_DATE}
+            endDate={END_DATE}
           />
         )}
         {view === "avaliacao" && <AvaliacaoView />}

@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { useViewportUrl } from "@/hooks/use-viewport-url"
 import { AreasLayer } from "@/components/map/AreasLayer"
 import { H3Layer } from "@/components/map/H3Layer"
 import { MapCanvas } from "@/components/map/MapCanvas"
 import { OcorrenciasLayer } from "@/components/map/OcorrenciasLayer"
-import { REGIONS } from "@/lib/compstat/regions"
+import type { Region } from "@/lib/api/regions"
 
 import { RegionList } from "./RegionList"
 
@@ -19,14 +19,18 @@ const MAP_LAYERS: { key: MapLayer; label: string }[] = [
 ]
 
 type Props = {
-  selected: ReadonlySet<string>
-  onToggleSelect: (id: string) => void
+  regions: Region[]
+  isLoading: boolean
+  selected: ReadonlySet<number>
+  onToggleSelect: (id: number) => void
   /** Date window for the ocorrencias query, YYYY-MM-DD. */
   startDate: string
   endDate: string
 }
 
 export function DiagnosticoView({
+  regions,
+  isLoading,
   selected,
   onToggleSelect,
   startDate,
@@ -36,8 +40,18 @@ export function DiagnosticoView({
   const [activeLayers, setActiveLayers] = useState<ReadonlySet<MapLayer>>(
     () => new Set<MapLayer>(["h3", "areas"]),
   )
-  const [openId, setOpenId] = useState<string | null>(REGIONS[0]?.id ?? null)
+  const [openId, setOpenId] = useState<number | null>(null)
+  const autoOpened = useRef(false)
   const [showPoints, setShowPoints] = useState(false)
+
+  // Auto-open the top-ranked region the first time data arrives. After the
+  // user closes it, leave it closed — don't re-open on refetch.
+  useEffect(() => {
+    if (autoOpened.current) return
+    if (regions.length === 0) return
+    autoOpened.current = true
+    setOpenId(regions[0].id)
+  }, [regions])
 
   const toggleLayer = (key: MapLayer) => {
     setActiveLayers((prev) => {
@@ -127,7 +141,8 @@ export function DiagnosticoView({
 
       {/* Ranking list */}
       <RegionList
-        regions={REGIONS}
+        regions={regions}
+        isLoading={isLoading}
         selected={selected}
         openId={openId}
         onToggleOpen={(id) => setOpenId((cur) => (cur === id ? null : id))}
