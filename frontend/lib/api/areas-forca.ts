@@ -8,6 +8,13 @@ export type AreaForcaScore = {
   occurrence_count: number
   weighted_count: number
   density: number
+  ocorrencia_score: number
+  denuncia_count: number
+  denuncia_density: number
+  denuncia_score: number
+  camera_count: number
+  camera_density: number
+  camera_score: number
   score: number
   score_raw: number
   by_desc_delito: Array<{ desc_delito: string; count: number }>
@@ -17,6 +24,7 @@ export type AreaForcaScore = {
 export type AreasForcaScoresResponse = {
   date_range: { start_date: string; end_date: string }
   weights: Record<string, number>
+  component_weights: Record<string, number>
   results: AreaForcaScore[]
 }
 

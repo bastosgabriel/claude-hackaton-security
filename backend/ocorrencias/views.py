@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 
 from .models import AreaForca, Camera, DiskDenuncia, FatorUrbano, Ocorrencia
 from .regions_logic import compute_region_list
-from .scoring import CRIME_WEIGHTS, compute_scores
+from .scoring import COMPONENT_WEIGHTS, CRIME_WEIGHTS, compute_scores
 from .serializers import (
     AreaForcaFeatureSerializer,
     AreaForcaScoreQuerySerializer,
@@ -126,6 +126,7 @@ class AreaForcaScoreListView(APIView):
                     "end_date":   v["end_date"].isoformat(),
                 },
                 "weights": CRIME_WEIGHTS,
+                "component_weights": COMPONENT_WEIGHTS,
                 "results": AreaForcaScoreSerializer(scored, many=True).data,
             },
             status=status.HTTP_200_OK,
