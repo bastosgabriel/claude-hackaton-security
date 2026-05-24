@@ -39,8 +39,8 @@ const TABS: WeekTab[] = [
   },
 ]
 
-const START_DATE = "2020-01-01"
-const END_DATE = "2026-01-01"
+const START_DATE = "2024-01-01"
+const END_DATE = "2024-12-31"
 
 export function CompStat() {
   const isClient = useIsClient()
