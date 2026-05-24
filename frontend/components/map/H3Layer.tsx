@@ -77,6 +77,7 @@ export function H3Layer({ startDate, endDate }: Props) {
         type: "fill",
         source: SOURCE_ID,
         paint: {
+          // @ts-expect-error okok
           "fill-color": color,
           "fill-opacity": 0.3,
         },

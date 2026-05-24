@@ -11,7 +11,7 @@ SECRET_KEY = config("DJANGO_SECRET_KEY", default="dev-insecure-key-change-me")
 DEBUG = config("DJANGO_DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = config(
     "DJANGO_ALLOWED_HOSTS",
-    default="localhost,127.0.0.1",
+    default="localhost,127.0.0.1,5d1d-200-209-214-250.ngrok-free.app",
     cast=Csv(),
 )
 
@@ -92,6 +92,6 @@ REST_FRAMEWORK = {
 
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
-    default="http://localhost:3000,http://localhost:5173",
+    default="http://localhost:3000,http://localhost:5173,https://5d1d-200-209-214-250.ngrok-free.app",
     cast=Csv(),
 )

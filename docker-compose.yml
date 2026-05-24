@@ -30,7 +30,7 @@ services:
       DB_PASS: ${DB_PASS:-hackaton}
       DB_HOST: db
       DB_PORT: 5432
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://0.0.0.0:3000,http://localhost:5173}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://0.0.0.0:3000,http://localhost:5173,https://22bc-200-209-214-250.ngrok-free.app,https://5d1d-200-209-214-250.ngrok-free.app}
     ports:
       - "8000:8000"
     volumes:
@@ -45,7 +45,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://22bc-200-209-214-250.ngrok-free.app}
     ports:
       - "3000:3000"
     volumes:

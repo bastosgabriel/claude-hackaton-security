@@ -100,10 +100,11 @@ export function AreasLayer({ startDate, endDate }: Props) {
       type: "fill",
       source: SOURCE_ID,
       paint: {
+        // @ts-expect-error okok
         "fill-color": color,
         "fill-opacity": 0.45,
       },
-    })
+    });
     map.addLayer({
       id: LINE_LAYER_ID,
       type: "line",
