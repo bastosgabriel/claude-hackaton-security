@@ -91,7 +91,12 @@ class OcorrenciaSerializer(serializers.Serializer):
 
 
 class AreaForcaScoreSerializer(serializers.Serializer):
-    """Output shape for one polygon's risk score."""
+    """Output shape for one polygon's risk score.
+
+    ``score`` is the combined risk factor (0-100, weighted average of the three
+    component scores). ``ocorrencia_score``, ``denuncia_score`` and
+    ``camera_score`` expose the components for inspection / charting.
+    """
 
     fid = serializers.IntegerField()
     nome_subar = serializers.CharField()
@@ -100,6 +105,13 @@ class AreaForcaScoreSerializer(serializers.Serializer):
     occurrence_count = serializers.IntegerField()
     weighted_count = serializers.FloatField()
     density = serializers.FloatField()
+    ocorrencia_score = serializers.FloatField()
+    denuncia_count = serializers.IntegerField()
+    denuncia_density = serializers.FloatField()
+    denuncia_score = serializers.FloatField()
+    camera_count = serializers.IntegerField()
+    camera_density = serializers.FloatField()
+    camera_score = serializers.FloatField()
     score = serializers.FloatField()
     score_raw = serializers.FloatField()
     by_desc_delito = serializers.ListField(child=serializers.DictField())
