@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import AreaForca, Camera, DiskDenuncia, FatorUrbano, Ocorrencia
+from .regions_logic import compute_region_list
 from .scoring import CRIME_WEIGHTS, compute_scores
 from .serializers import (
     AreaForcaFeatureSerializer,
@@ -22,6 +23,8 @@ from .serializers import (
     DiskDenunciaSerializer,
     FatorUrbanoSerializer,
     OcorrenciaSerializer,
+    RegionListQuerySerializer,
+    RegionSerializer,
     SearchRequestSerializer,
 )
 
@@ -139,6 +142,31 @@ class AreasForcaListView(APIView):
     def get(self, request):
         qs = AreaForca.objects.all().order_by("fid")
         return Response(AreaForcaFeatureSerializer(qs, many=True).data)
+
+
+class RegionListView(APIView):
+    """GET /api/regions/?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
+
+    Returns one entry per ``AreaForca`` polygon with the headline score,
+    operational counts (roubos/denuncias/ambiente), and the 5 criteria
+    that back the score bar in the frontend ``RegionList`` panel.
+    """
+
+    def get(self, request):
+        q = RegionListQuerySerializer(data=request.query_params)
+        q.is_valid(raise_exception=True)
+        v = q.validated_data
+        results = compute_region_list(v["start_date"], v["end_date"])
+        return Response(
+            {
+                "date_range": {
+                    "start_date": v["start_date"].isoformat(),
+                    "end_date":   v["end_date"].isoformat(),
+                },
+                "results": RegionSerializer(results, many=True).data,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class AreaSnapshotView(APIView):

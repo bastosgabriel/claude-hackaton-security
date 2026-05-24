@@ -5,6 +5,7 @@ from .views import (
     AreasForcaListView,
     AreaSnapshotView,
     OcorrenciaSearchView,
+    RegionListView,
 )
 
 ocorrencias_urlpatterns = [
@@ -18,6 +19,10 @@ areas_forca_urlpatterns = [
 
 snapshot_urlpatterns = [
     path("", AreaSnapshotView.as_view(), name="area-snapshot"),
+]
+
+regions_urlpatterns = [
+    path("", RegionListView.as_view(), name="region-list"),
 ]
 
 # Default export: kept for backward compat with the original include().

@@ -128,6 +128,45 @@ class AreaForcaScoreQuerySerializer(serializers.Serializer):
         return attrs
 
 
+class RegionListQuerySerializer(serializers.Serializer):
+    """Validates the date window for ``GET /api/regions/``."""
+
+    start_date = serializers.DateField()
+    end_date = serializers.DateField()
+
+    def validate(self, attrs):
+        if attrs["start_date"] > attrs["end_date"]:
+            raise serializers.ValidationError("start_date must be <= end_date")
+        today = dt.date.today()
+        if attrs["start_date"] < DATE_MIN or attrs["end_date"] > today:
+            raise serializers.ValidationError(
+                f"dates must lie within [{DATE_MIN.isoformat()}, {today.isoformat()}]"
+            )
+        return attrs
+
+
+class RegionCriterionSerializer(serializers.Serializer):
+    key = serializers.CharField()
+    label = serializers.CharField()
+    value = serializers.CharField()
+    pct = serializers.IntegerField()
+    level = serializers.CharField()
+
+
+class RegionSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    aisp = serializers.CharField(allow_blank=True)
+    score = serializers.IntegerField()
+    level = serializers.CharField()
+    roubos = serializers.IntegerField()
+    denuncias = serializers.IntegerField()
+    ambiente = serializers.IntegerField()
+    criteria = RegionCriterionSerializer(many=True)
+    narrative = serializers.CharField(allow_blank=True)
+    actions = serializers.ListField(child=serializers.DictField())
+
+
 class AreaSnapshotRequestSerializer(serializers.Serializer):
     """Validates a snapshot request: { fid, start_date, end_date }."""
 
