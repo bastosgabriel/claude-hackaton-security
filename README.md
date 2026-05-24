@@ -1,5 +1,31 @@
 # claude-hackaton-security
 
+## How to run
+
+You need [Docker](https://docs.docker.com/engine/install/) +
+[Docker Compose v2](https://docs.docker.com/compose/install/). Three commands:
+
+```bash
+cp .env.example .env                                                   # 1. defaults work as-is
+docker compose up --build                                              # 2. db + backend + frontend
+docker compose exec backend python manage.py load_data --truncate      # 3. import the data (~30s)
+```
+
+Then:
+
+- API — <http://localhost:8000>
+- Frontend — <http://localhost:3000>
+- Admin — <http://localhost:8000/admin/> (run
+  `docker compose exec backend python manage.py createsuperuser` first)
+
+Schema migrations run automatically every time the `backend` container
+starts. Stop everything with `Ctrl+C` (or `docker compose down`).
+
+For non-Docker setup, manual configuration, the API reference, and
+troubleshooting, keep reading.
+
+## About
+
 Geospatial backend + frontend for analysing public-safety data in the city of
 Rio de Janeiro. The frontend lets the user draw a region on a map and pick a
 date window; the backend returns the crime occurrences, citizen denúncias,
@@ -270,13 +296,16 @@ docker compose exec backend pytest
 cd backend && uv run pytest
 ```
 
-Fourteen tests cover:
+Twenty-five tests cover:
 
-- `tests/test_search.py` (6) — polygon hit/miss, invalid input, date-range
-  validation, null-date exclusion, pagination.
+- `tests/test_search.py` (5) — polygon hit/miss, invalid input, date-range
+  validation, pagination.
 - `tests/test_scoring.py` (8) — weighted-density math, min-max
   normalization edges (zero occurrences, ties), score ordering, date-window
   filtering, endpoint round-trip with GeoJSON output, and validation errors.
+- `tests/test_loaders.py` (12) — date reconciliation from the redundant
+  `ano`/`mes`/`data` CSV columns (typo'd years, month conflicts, fallback
+  to day=1, invalid input).
 
 ## Troubleshooting
 
