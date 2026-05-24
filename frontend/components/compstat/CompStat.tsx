@@ -81,7 +81,12 @@ export function CompStat() {
         )}
 
         {view === "prereuniao" && (
-          <DiagnosticoView selected={selected} onToggleSelect={toggleSelect} />
+          <DiagnosticoView
+            selected={selected}
+            onToggleSelect={toggleSelect}
+            startDate="2026-05-27"
+            endDate="2026-06-02"
+          />
         )}
         {view === "avaliacao" && <AvaliacaoView />}
 

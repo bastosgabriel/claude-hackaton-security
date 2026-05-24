@@ -6,6 +6,7 @@ import { useViewportUrl } from "@/hooks/use-viewport-url"
 import { AreasLayer } from "@/components/map/AreasLayer"
 import { H3Layer } from "@/components/map/H3Layer"
 import { MapCanvas } from "@/components/map/MapCanvas"
+import { OcorrenciasLayer } from "@/components/map/OcorrenciasLayer"
 import { REGIONS } from "@/lib/compstat/regions"
 
 import { RegionList } from "./RegionList"
@@ -15,9 +16,17 @@ const MAP_FILTERS = ["Score", "Roubos", "Denúncias", "Ambiental"] as const
 type Props = {
   selected: ReadonlySet<string>
   onToggleSelect: (id: string) => void
+  /** Date window for the ocorrencias query, YYYY-MM-DD. */
+  startDate: string
+  endDate: string
 }
 
-export function DiagnosticoView({ selected, onToggleSelect }: Props) {
+export function DiagnosticoView({
+  selected,
+  onToggleSelect,
+  startDate,
+  endDate,
+}: Props) {
   const { initialView, writeViewportToUrl } = useViewportUrl()
   const [mapFilter, setMapFilter] = useState<(typeof MAP_FILTERS)[number]>("Score")
   const [openId, setOpenId] = useState<string | null>(REGIONS[0]?.id ?? null)
@@ -66,6 +75,7 @@ export function DiagnosticoView({ selected, onToggleSelect }: Props) {
           <MapCanvas initialView={initialView} onMoveEnd={writeViewportToUrl}>
             <H3Layer />
             <AreasLayer />
+            <OcorrenciasLayer startDate={startDate} endDate={endDate} />
           </MapCanvas>
           <div className="absolute bottom-3.5 left-3.5 z-10 flex flex-col gap-1.5 rounded-xl border border-slate-200 bg-white/95 px-3 py-2.5 text-[11px] shadow-sm backdrop-blur">
             <div className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
