@@ -7,6 +7,9 @@ import json
 
 from django.contrib.gis.geos import GEOSGeometry, Polygon
 from rest_framework import serializers
+from rest_framework_gis.serializers import GeoFeatureModelSerializer
+
+from .models import AreaForca
 
 DATE_MIN = dt.date(2000, 1, 1)
 MAX_PAGE_SIZE = 2000
@@ -123,3 +126,82 @@ class AreaForcaScoreQuerySerializer(serializers.Serializer):
                 f"dates must lie within [{DATE_MIN.isoformat()}, {today.isoformat()}]"
             )
         return attrs
+
+
+class AreaSnapshotRequestSerializer(serializers.Serializer):
+    """Validates a snapshot request: { fid, start_date, end_date }."""
+
+    fid = serializers.IntegerField()
+    start_date = serializers.DateField()
+    end_date = serializers.DateField()
+
+    def validate(self, attrs):
+        if attrs["start_date"] > attrs["end_date"]:
+            raise serializers.ValidationError("start_date must be <= end_date")
+        today = dt.date.today()
+        if attrs["start_date"] < DATE_MIN or attrs["end_date"] > today:
+            raise serializers.ValidationError(
+                f"dates must lie within [{DATE_MIN.isoformat()}, {today.isoformat()}]"
+            )
+        return attrs
+
+
+class AreaForcaFeatureSerializer(GeoFeatureModelSerializer):
+    """GeoJSON Feature representation of an AreaForca row.
+
+    Properties carry `fid` and `nome_subar` so the existing AreasLayer.tsx
+    on the frontend can consume the response unchanged.
+    """
+
+    class Meta:
+        model = AreaForca
+        geo_field = "geometry"
+        id_field = False
+        fields = ("fid", "nome_subar", "area_km2")
+
+
+class _PointMixin:
+    def get_lat(self, obj) -> float:
+        return obj.location.y if obj.location else None
+
+    def get_lng(self, obj) -> float:
+        return obj.location.x if obj.location else None
+
+
+class CameraSerializer(_PointMixin, serializers.Serializer):
+    id = serializers.CharField(source="id_ponto")
+    lat = serializers.SerializerMethodField()
+    lng = serializers.SerializerMethodField()
+    nome_area_fm = serializers.CharField(allow_blank=True)
+    id_trecho = serializers.IntegerField()
+
+
+class FatorUrbanoSerializer(_PointMixin, serializers.Serializer):
+    id = serializers.IntegerField(source="id_resposta_ocorrencia")
+    lat = serializers.SerializerMethodField()
+    lng = serializers.SerializerMethodField()
+    logradouro = serializers.CharField(allow_blank=True)
+    numero_porta = serializers.CharField(allow_blank=True)
+    bairro_nome = serializers.CharField(allow_blank=True)
+    subarea_nome = serializers.CharField(allow_blank=True)
+    tipo_ocorrencia_descricao = serializers.CharField(allow_blank=True)
+    orgao_responsavel = serializers.CharField(allow_blank=True)
+
+
+class DiskDenunciaSerializer(_PointMixin, serializers.Serializer):
+    id = serializers.IntegerField(source="id_denuncia")
+    lat = serializers.SerializerMethodField()
+    lng = serializers.SerializerMethodField()
+    numero_denuncia = serializers.CharField(allow_blank=True)
+    data_denuncia = serializers.DateTimeField(allow_null=True)
+    data_difusao = serializers.DateTimeField(allow_null=True)
+    bairro_logradouro = serializers.CharField(allow_blank=True)
+    subbairro_logradouro = serializers.CharField(allow_blank=True)
+    municipio = serializers.CharField(allow_blank=True)
+    estado = serializers.CharField(allow_blank=True)
+    orgao_nome = serializers.CharField(allow_blank=True)
+    orgao_tipo = serializers.CharField(allow_blank=True)
+    classe = serializers.CharField(allow_blank=True)
+    tipo = serializers.CharField(allow_blank=True)
+    status_denuncia = serializers.CharField(allow_blank=True)
+    relato_redacted = serializers.CharField(allow_blank=True)
