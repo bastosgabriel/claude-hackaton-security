@@ -6,12 +6,12 @@ You need [Docker](https://docs.docker.com/engine/install/) +
 [Docker Compose v2](https://docs.docker.com/compose/install/). Three commands:
 
 ```bash
-cp .env.example .env                                                   # 1. defaults work as-is
-docker compose up --build                                              # 2. db + backend + frontend
-docker compose exec backend python manage.py load_data --truncate      # 3. import the data (~30s)
+cp .env.example .env                                          # defaults work as-is
+docker compose up --build -d                                  # db + backend + frontend
+docker compose exec backend python manage.py load_data        # import the data (~30s)
 ```
 
-Then:
+Then open <http://localhost:3000>.
 
 - API — <http://localhost:8000>
 - Frontend — <http://localhost:3000>
@@ -19,7 +19,7 @@ Then:
   `docker compose exec backend python manage.py createsuperuser` first)
 
 Schema migrations run automatically every time the `backend` container
-starts. Stop everything with `Ctrl+C` (or `docker compose down`).
+starts. Stop everything with `docker compose down`.
 
 For non-Docker setup, manual configuration, the API reference, and
 troubleshooting, keep reading.
@@ -130,7 +130,21 @@ cd backend && uv run python manage.py load_data
 ```
 
 The command loads everything in declared order (ocorrencias → cameras →
-disk_denuncia → fatores_urbanos → areas_forca). Useful flags:
+disk_denuncia → fatores_urbanos → areas_forca).
+
+> **Migrations must already be applied** before `load_data` will work — the
+> command does `INSERT`s straight into the model tables. `docker compose up`
+> takes care of this via the backend's `CMD` (`migrate --noinput &&
+> runserver`). If you're using `docker compose run --rm backend …` instead
+> (which **skips the CMD**), run `python manage.py migrate` first or chain
+> both commands:
+>
+> ```bash
+> docker compose run --rm backend sh -c \
+>   "python manage.py migrate --noinput && python manage.py load_data"
+> ```
+
+Useful flags:
 
 ```bash
 # Wipe each table before loading
@@ -277,6 +291,12 @@ Twenty-five tests cover:
 - **`could not connect to server` on backend startup** — Postgres isn't ready
   yet. With Compose the healthcheck handles this; manually, wait a few
   seconds after starting Postgres and verify `pg_isready -h 127.0.0.1`.
+- **`ProgrammingError: relation "ocorrencias_ocorrencia" does not exist`** —
+  the database is empty (no schema). The backend container's `CMD` runs
+  `migrate` automatically on startup, but `docker compose run --rm backend
+  …` bypasses that. Either bring the stack up first (`docker compose up
+  --build`) and then `docker compose exec backend …`, or prepend `python
+  manage.py migrate --noinput && ` to your one-shot `run` command.
 - **`extension "postgis" is not available`** — your Postgres install is
   missing PostGIS. Either use the `postgis/postgis:16-3.4` image (Compose
   does this for you) or install the system package (`postgresql-16-postgis-3`
