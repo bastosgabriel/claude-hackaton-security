@@ -9,10 +9,11 @@ camera coverage and urban risk factors that fall inside.
   PostgreSQL/PostGIS.
 - **Frontend** — Next.js 16 + MapLibre GL.
 - **Data** — five CSVs + a shapefile in `data/`, sourced from the
-  `claude_impact_lab_compstat_rio` reference repo. The four CSVs that drive
-  the API (`df_ocorrencias_tratado`, `cameras_areas_fm`, `disk_denuncia`,
-  `fatores_urbanos`) are imported into Postgres by a single management
-  command.
+  `claude_impact_lab_compstat_rio` reference repo. Four CSVs
+  (`df_ocorrencias_tratado`, `cameras_areas_fm`, `disk_denuncia`,
+  `fatores_urbanos`) and the `sh_area_forca` shapefile (municipal "áreas de
+  força" — priority public-safety polygons) are imported into Postgres by a
+  single management command.
 
 ## Project layout
 
@@ -57,7 +58,7 @@ out of the box for local development:
 ```
 DJANGO_SECRET_KEY=dev-insecure-key-change-me
 DJANGO_DEBUG=True
-DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
 DB_NAME=hackaton
 DB_USER=hackaton
 DB_PASS=hackaton
@@ -126,7 +127,8 @@ pnpm dev                             # http://localhost:3000
 
 ## 3. Load the data
 
-The four CSVs in `data/` are imported by a single Django management command:
+The four CSVs and the `sh_area_forca` shapefile in `data/` are imported by a
+single Django management command:
 
 ```bash
 # Docker:
@@ -137,7 +139,7 @@ cd backend && uv run python manage.py load_data
 ```
 
 The command loads everything in declared order (ocorrencias → cameras →
-disk_denuncia → fatores_urbanos). Useful flags:
+disk_denuncia → fatores_urbanos → areas_forca). Useful flags:
 
 ```bash
 # Wipe each table before loading
@@ -146,16 +148,19 @@ python manage.py load_data --truncate
 # Just one or two datasets
 python manage.py load_data --only cameras,fatores_urbanos
 
+# Just the priority-zone polygons
+python manage.py load_data --only areas_forca
+
 # Small slice for a quick smoke test
 python manage.py load_data --limit 1000
 
-# CSVs in a non-default location
-python manage.py load_data --data-dir /absolute/path/to/csvs
+# Files in a non-default location
+python manage.py load_data --data-dir /absolute/path/to/data
 ```
 
 Available datasets: `ocorrencias`, `cameras`, `disk_denuncia`,
-`fatores_urbanos`. Missing files are skipped with a warning rather than
-aborting the whole run.
+`fatores_urbanos`, `areas_forca`. Missing files are skipped with a warning
+rather than aborting the whole run.
 
 After loading you should see roughly:
 
@@ -165,10 +170,11 @@ After loading you should see roughly:
 | cameras | 985 |
 | disk_denuncia | ~18,000 parent rows |
 | fatores_urbanos | ~2,085 |
+| areas_forca | 8 polygons |
 
 ## 4. Hit the API
 
-The polygon + date-range search endpoint:
+### 4a. Polygon + date-range search — `POST /api/ocorrencias/search/`
 
 ```bash
 curl -X POST http://localhost:8000/api/ocorrencias/search/ \
@@ -198,6 +204,49 @@ Response shape:
 Polygon points are `[lat, lng]` pairs; the ring is auto-closed if you omit
 the duplicate final point. `page_size` is capped at 2000.
 
+### 4b. Risk scores per área de força — `GET /api/areas-forca/scores/`
+
+Returns one risk score (0–100) per priority-zone polygon, computed as a
+weighted-by-crime-type density (`weighted_count / area_km²`) min-max
+normalized across all polygons.
+
+```bash
+curl 'http://localhost:8000/api/areas-forca/scores/?start_date=2023-01-01&end_date=2024-12-31'
+```
+
+Query params are optional (defaults: `start_date=2000-01-01`,
+`end_date=today`).
+
+Response shape:
+
+```json
+{
+  "date_range": { "start_date": "2023-01-01", "end_date": "2024-12-31" },
+  "weights":    { "Roubo a transeunte": 1.0, "Roubo de aparelho celular": 0.8, "Roubo em coletivo": 1.2 },
+  "results": [
+    {
+      "fid": 20,
+      "nome_subar": "Presidente Vargas - Campo de Santana - Central do Brasil - Cinelândia",
+      "area_km2": 1.348,
+      "geometry": { "type": "Polygon", "coordinates": [...] },
+      "occurrence_count": 18,
+      "weighted_count": 17.4,
+      "density": 12.91,
+      "score": 100.0,
+      "score_raw": 12.91,
+      "by_desc_delito": [{ "desc_delito": "Roubo a transeunte", "count": 12 }, ...],
+      "by_year":        [{ "year": 2023, "count": 9 }, { "year": 2024, "count": 9 }]
+    },
+    ...
+  ]
+}
+```
+
+Results are sorted by `score` descending. Crime-type weights live in
+`backend/ocorrencias/scoring.py` (`CRIME_WEIGHTS`).
+
+### 4c. Admin
+
 The Django admin at <http://localhost:8000/admin/> works once you create a
 superuser:
 
@@ -206,6 +255,10 @@ docker compose exec backend python manage.py createsuperuser
 # or, manual:
 cd backend && uv run python manage.py createsuperuser
 ```
+
+All models — `Ocorrencia`, `Camera`, `DiskDenuncia`, `FatorUrbano`,
+`AreaForca` — are registered with GeoDjango's `GISModelAdmin`, so polygons
+and points render on an OpenLayers map.
 
 ## 5. Tests
 
@@ -217,8 +270,13 @@ docker compose exec backend pytest
 cd backend && uv run pytest
 ```
 
-Six tests cover polygon hit/miss, invalid input, date-range validation,
-null-date exclusion, and pagination.
+Fourteen tests cover:
+
+- `tests/test_search.py` (6) — polygon hit/miss, invalid input, date-range
+  validation, null-date exclusion, pagination.
+- `tests/test_scoring.py` (8) — weighted-density math, min-max
+  normalization edges (zero occurrences, ties), score ordering, date-window
+  filtering, endpoint round-trip with GeoJSON output, and validation errors.
 
 ## Troubleshooting
 
@@ -234,3 +292,8 @@ null-date exclusion, and pagination.
   (Debian/Ubuntu) or `brew install gdal geos proj` (macOS).
 - **Frontend can't reach the API** — confirm `NEXT_PUBLIC_API_URL` points at
   the backend host (the Compose default is `http://localhost:8000`).
+- **`DisallowedHost: Invalid HTTP_HOST header: '0.0.0.0:8000'`** — your
+  browser is hitting `http://0.0.0.0:8000/` (the URL `runserver` prints) but
+  `DJANGO_ALLOWED_HOSTS` doesn't list `0.0.0.0`. Either browse via
+  `http://localhost:8000/` / `http://127.0.0.1:8000/`, or add `0.0.0.0` to
+  the variable in your `.env` and `docker compose up -d backend` to apply.
