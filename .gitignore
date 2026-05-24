@@ -10,3 +10,11 @@ devdata/
 
 # OS
 .DS_Store
+
+# Env / secrets
+.env
+
+# Django
+*.sqlite3
+backend/**/migrations/__pycache__/
+
