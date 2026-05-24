@@ -116,41 +116,6 @@ Stop everything with `Ctrl+C` (or `docker compose down`).
 To detach: `docker compose up --build -d`. Tail logs with
 `docker compose logs -f backend`.
 
-### Option B — Without Docker (manual)
-
-#### B1. Database
-
-Install PostgreSQL and the PostGIS extension locally (see prerequisites table
-above), then create the database:
-
-```bash
-sudo -u postgres psql <<SQL
-CREATE USER hackaton WITH PASSWORD 'hackaton';
-CREATE DATABASE hackaton OWNER hackaton;
-\c hackaton
-CREATE EXTENSION postgis;
-SQL
-```
-
-Make sure `DB_HOST=127.0.0.1` in your `.env`.
-
-#### B2. Backend
-
-```bash
-uv sync                              # install Python deps into .venv/
-cd backend
-uv run python manage.py migrate      # apply schema
-uv run python manage.py runserver    # http://localhost:8000
-```
-
-#### B3. Frontend
-
-```bash
-cd frontend
-pnpm install
-pnpm dev                             # http://localhost:3000
-```
-
 ## 3. Load the data
 
 The four CSVs and the `sh_area_forca` shapefile in `data/` are imported by a
