@@ -1,11 +1,23 @@
 "use client"
 
+import { useCallback, useEffect, useState } from "react"
+import type { Map as MaplibreMap } from "maplibre-gl"
+
 import { AreasLayer } from "@/components/map/AreasLayer"
 import { H3Layer } from "@/components/map/H3Layer"
 import { MapCanvas } from "@/components/map/MapCanvas"
+import { useMap } from "@/components/map/map-context"
+import { OcorrenciasLayer } from "@/components/map/OcorrenciasLayer"
 import { INITIAL_CENTER, INITIAL_ZOOM } from "@/lib/map-config"
 
 const SNAPSHOT_VIEW = { center: INITIAL_CENTER, zoom: INITIAL_ZOOM }
+
+type MapLayer = "h3" | "areas"
+
+const MAP_LAYERS: { key: MapLayer; label: string }[] = [
+  { key: "h3", label: "Ocorrências" },
+  { key: "areas", label: "Áreas da FM" },
+]
 
 type Delta = {
   label: string
@@ -38,21 +50,100 @@ const TIMELINE: { date: string; text: React.ReactNode }[] = [
 ]
 
 export function AvaliacaoView() {
+  const [activeLayers, setActiveLayers] = useState<ReadonlySet<MapLayer>>(
+    () => new Set<MapLayer>(["h3", "areas"]),
+  )
+  const [showPoints, setShowPoints] = useState(false)
+
+  const toggleLayer = (key: MapLayer) => {
+    setActiveLayers((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  // Mirror pan/zoom across all snapshot maps. Each MapCanvas registers its
+  // instance on mount; when the user drags or zooms one of them, the others
+  // jump to the same view. The `originalEvent` check skips programmatic moves
+  // (the ones we trigger here) so the sync doesn't loop.
+  const [maps, setMaps] = useState<MaplibreMap[]>([])
+  const registerMap = useCallback((m: MaplibreMap) => {
+    setMaps((cur) => (cur.includes(m) ? cur : [...cur, m]))
+    return () => setMaps((cur) => cur.filter((x) => x !== m))
+  }, [])
+
+  useEffect(() => {
+    if (maps.length < 2) return
+    const cleanups: Array<() => void> = []
+    for (const src of maps) {
+      const onMove = (e: { originalEvent?: unknown }) => {
+        if (!e.originalEvent) return
+        const c = src.getCenter()
+        const z = src.getZoom()
+        for (const m of maps) {
+          if (m === src) continue
+          m.jumpTo({ center: [c.lng, c.lat], zoom: z })
+        }
+      }
+      src.on("move", onMove)
+      cleanups.push(() => src.off("move", onMove))
+    }
+    return () => cleanups.forEach((c) => c())
+  }, [maps])
+
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_420px]">
-      {/* Stacked before/after maps */}
-      <div className="grid h-[560px] grid-rows-2 gap-3.5">
+      {/* Filter bar + stacked before/after maps */}
+      <div className="grid h-[560px] grid-rows-[auto_1fr_1fr] gap-3.5">
+        <div className="flex flex-wrap items-center justify-end gap-1.5 rounded-2xl border border-slate-200 bg-white px-4.5 py-2 shadow-sm">
+          <label className="mr-1.5 flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-slate-600">
+            <input
+              type="checkbox"
+              checked={showPoints}
+              onChange={(e) => setShowPoints(e.target.checked)}
+              className="h-3.5 w-3.5 cursor-pointer accent-[#0a1729]"
+            />
+            Pontos
+          </label>
+          {MAP_LAYERS.map(({ key, label }) => {
+            const active = activeLayers.has(key)
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => toggleLayer(key)}
+                aria-pressed={active}
+                className={
+                  "rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors " +
+                  (active
+                    ? "border-[#0a1729] bg-[#0a1729] text-white"
+                    : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100")
+                }
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
         <SnapshotPanel
           stampClass="bg-orange-700/90"
           stampLabel="Antes · jan–dez 2023 · Snapshot"
           startDate="2023-01-01"
           endDate="2023-12-31"
+          activeLayers={activeLayers}
+          showPoints={showPoints}
+          registerMap={registerMap}
         />
         <SnapshotPanel
           stampClass="bg-red-600/90"
           stampLabel="● Atual · jan–dez 2024 · Real time"
           startDate="2024-01-01"
           endDate="2024-12-31"
+          activeLayers={activeLayers}
+          showPoints={showPoints}
+          registerMap={registerMap}
         />
       </div>
 
@@ -165,17 +256,31 @@ function SnapshotPanel({
   stampLabel,
   startDate,
   endDate,
+  activeLayers,
+  showPoints,
+  registerMap,
 }: {
   stampClass: string
   stampLabel: string
   startDate: string
   endDate: string
+  activeLayers: ReadonlySet<MapLayer>
+  showPoints: boolean
+  registerMap: (m: MaplibreMap) => void | (() => void)
 }) {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-b from-blue-50 to-blue-100">
       <MapCanvas initialView={SNAPSHOT_VIEW}>
-        <H3Layer startDate={startDate} endDate={endDate} />
-        <AreasLayer startDate={startDate} endDate={endDate} />
+        <MapRegister registerMap={registerMap} />
+        {activeLayers.has("h3") && (
+          <H3Layer startDate={startDate} endDate={endDate} />
+        )}
+        {activeLayers.has("areas") && (
+          <AreasLayer startDate={startDate} endDate={endDate} />
+        )}
+        {showPoints && (
+          <OcorrenciasLayer startDate={startDate} endDate={endDate} />
+        )}
       </MapCanvas>
       <div
         className={
@@ -187,6 +292,19 @@ function SnapshotPanel({
       </div>
     </div>
   )
+}
+
+function MapRegister({
+  registerMap,
+}: {
+  registerMap: (m: MaplibreMap) => void | (() => void)
+}) {
+  const map = useMap()
+  useEffect(() => {
+    const cleanup = registerMap(map)
+    return typeof cleanup === "function" ? cleanup : undefined
+  }, [map, registerMap])
+  return null
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
