@@ -14,7 +14,7 @@ from __future__ import annotations
 import datetime as dt
 from typing import Any
 
-from django.db.models import Count
+from django.db.models import Count, Max
 
 from .models import AreaForca, DiskDenuncia, FatorUrbano, Ocorrencia
 from .scoring import compute_scores
@@ -81,10 +81,13 @@ def compute_region_list(
     """Build one region payload per ``AreaForca``, sorted by score desc."""
     scored = {r["fid"]: r for r in compute_scores(start_date, end_date)}
 
-    # Criteria reference fixed 7-day / 4-week windows anchored on end_date,
-    # independent of the caller's start_date (per the doc).
-    last7_start = end_date - dt.timedelta(days=6)
-    last4w_start = end_date - dt.timedelta(weeks=4) + dt.timedelta(days=1)
+    # ``historico_4s`` compares the last 4 weeks vs. the previous 4 weeks,
+    # anchored at end_date but capped to the latest date that actually has
+    # data — otherwise a caller passing a future end_date gets a 0/0
+    # comparison even when the dataset is rich.
+    latest_data = Ocorrencia.objects.aggregate(mx=Max("data"))["mx"]
+    hist_anchor = min(end_date, latest_data) if latest_data else end_date
+    last4w_start = hist_anchor - dt.timedelta(weeks=4) + dt.timedelta(days=1)
     prev4w_end = last4w_start - dt.timedelta(days=1)
     prev4w_start = prev4w_end - dt.timedelta(weeks=4) + dt.timedelta(days=1)
 
@@ -95,16 +98,16 @@ def compute_region_list(
         geom = area.geometry
         score_row = scored.get(area.fid, {})
 
-        roubos_7d = Ocorrencia.objects.filter(
+        roubos = Ocorrencia.objects.filter(
             location__within=geom,
             desc_delito__in=ROUBO_DELITOS,
-            data__gte=last7_start,
+            data__gte=start_date,
             data__lte=end_date,
         ).count()
 
-        denuncias_7d = DiskDenuncia.objects.filter(
+        denuncias = DiskDenuncia.objects.filter(
             location__within=geom,
-            data_denuncia__date__gte=last7_start,
+            data_denuncia__date__gte=start_date,
             data_denuncia__date__lte=end_date,
         ).count()
 
@@ -113,7 +116,7 @@ def compute_region_list(
         last4w_count = Ocorrencia.objects.filter(
             location__within=geom,
             data__gte=last4w_start,
-            data__lte=end_date,
+            data__lte=hist_anchor,
         ).count()
         prev4w_count = Ocorrencia.objects.filter(
             location__within=geom,
@@ -130,14 +133,14 @@ def compute_region_list(
         raw.append({
             "area":          area,
             "score":         float(score_row.get("score", 0.0)),
-            "roubos_7d":     roubos_7d,
-            "denuncias_7d":  denuncias_7d,
+            "roubos":        roubos,
+            "denuncias":     denuncias,
             "fatores_count": fatores_count,
             "change_pct":    change_pct,
         })
 
-    roubos_pcts = _pct_minmax([r["roubos_7d"] for r in raw])
-    denuncias_pcts = _pct_minmax([r["denuncias_7d"] for r in raw])
+    roubos_pcts = _pct_minmax([r["roubos"] for r in raw])
+    denuncias_pcts = _pct_minmax([r["denuncias"] for r in raw])
     ambiente_pcts = [
         min(r["fatores_count"], FATORES_CAP) / FATORES_CAP * 100.0 for r in raw
     ]
@@ -156,15 +159,15 @@ def compute_region_list(
         criteria = [
             {
                 "key":   "roubos_7d",
-                "label": "Roubos a transeunte (7d)",
-                "value": str(r["roubos_7d"]),
+                "label": "Roubos a transeunte",
+                "value": str(r["roubos"]),
                 "pct":   round(roubos_pcts[i]),
                 "level": _level_from_pct(roubos_pcts[i]),
             },
             {
                 "key":   "disque_denuncia",
                 "label": "Disque Denúncia",
-                "value": str(r["denuncias_7d"]),
+                "value": str(r["denuncias"]),
                 "pct":   round(denuncias_pcts[i]),
                 "level": _level_from_pct(denuncias_pcts[i]),
             },
@@ -197,8 +200,8 @@ def compute_region_list(
             "aisp":      _modal_aisp(area.geometry, start_date, end_date),
             "score":     round(score),
             "level":     _level_from_pct(score),
-            "roubos":    r["roubos_7d"],
-            "denuncias": r["denuncias_7d"],
+            "roubos":    r["roubos"],
+            "denuncias": r["denuncias"],
             "ambiente":  round(ambiente_pct),
             "criteria":  criteria,
             "narrative": "",
