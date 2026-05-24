@@ -11,7 +11,12 @@ import { REGIONS } from "@/lib/compstat/regions"
 
 import { RegionList } from "./RegionList"
 
-const MAP_FILTERS = ["Score", "Roubos", "Denúncias", "Ambiental"] as const
+type MapLayer = "h3" | "areas"
+
+const MAP_LAYERS: { key: MapLayer; label: string }[] = [
+  { key: "h3", label: "Ocorrências" },
+  { key: "areas", label: "Áreas da FM" },
+]
 
 type Props = {
   selected: ReadonlySet<string>
@@ -28,9 +33,20 @@ export function DiagnosticoView({
   endDate,
 }: Props) {
   const { initialView, writeViewportToUrl } = useViewportUrl()
-  const [mapFilter, setMapFilter] = useState<(typeof MAP_FILTERS)[number]>("Score")
+  const [activeLayers, setActiveLayers] = useState<ReadonlySet<MapLayer>>(
+    () => new Set<MapLayer>(["h3", "areas"]),
+  )
   const [openId, setOpenId] = useState<string | null>(REGIONS[0]?.id ?? null)
   const [showPoints, setShowPoints] = useState(false)
+
+  const toggleLayer = (key: MapLayer) => {
+    setActiveLayers((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_460px]">
@@ -58,21 +74,25 @@ export function DiagnosticoView({
               />
               Pontos
             </label>
-            {MAP_FILTERS.map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setMapFilter(f)}
-                className={
-                  "rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors " +
-                  (mapFilter === f
-                    ? "border-[#0a1729] bg-[#0a1729] text-white"
-                    : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100")
-                }
-              >
-                {f}
-              </button>
-            ))}
+            {MAP_LAYERS.map(({ key, label }) => {
+              const active = activeLayers.has(key)
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => toggleLayer(key)}
+                  aria-pressed={active}
+                  className={
+                    "rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors " +
+                    (active
+                      ? "border-[#0a1729] bg-[#0a1729] text-white"
+                      : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100")
+                  }
+                >
+                  {label}
+                </button>
+              )
+            })}
           </div>
         </div>
         <div className="relative flex-1 overflow-hidden rounded-b-2xl bg-gradient-to-b from-blue-50 to-blue-100">
@@ -83,8 +103,12 @@ export function DiagnosticoView({
             Projeção 27 mai – 2 jun
           </div>
           <MapCanvas initialView={initialView} onMoveEnd={writeViewportToUrl}>
-            <H3Layer startDate={startDate} endDate={endDate} />
-            <AreasLayer />
+            {activeLayers.has("h3") && (
+              <H3Layer startDate={startDate} endDate={endDate} />
+            )}
+            {activeLayers.has("areas") && (
+              <AreasLayer startDate={startDate} endDate={endDate} />
+            )}
             {showPoints && (
               <OcorrenciasLayer startDate={startDate} endDate={endDate} />
             )}

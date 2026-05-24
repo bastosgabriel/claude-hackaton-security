@@ -18,17 +18,27 @@ type Props = {
   endDate: string; // YYYY-MM-DD
 };
 
-// Absolute count thresholds: same color means the same number of points,
-// regardless of viewport / zoom.
-const COUNT_COLOR: unknown[] = [
-  "step",
-  ["coalesce", ["get", "count"], 0],
-  "rgba(0,0,0,0)",
-  1, "#16a34a",
-  5, "#ca8a04",
-  15, "#ea580c",
-  30, "#dc2626",
-];
+// Per-resolution thresholds. H3 cells get ~7× smaller per resolution step,
+// so the same "hot" feeling needs a lower count at higher zooms.
+const THRESHOLDS_BY_RES: Record<number, [number, number, number, number]> = {
+  8:  [1, 25, 75, 150],
+  9:  [1, 8, 25, 50],
+  10: [1, 3, 8, 15],
+};
+
+function colorForResolution(resolution: number): unknown[] {
+  const [t1, t2, t3, t4] =
+    THRESHOLDS_BY_RES[resolution] ?? THRESHOLDS_BY_RES[9];
+  return [
+    "step",
+    ["coalesce", ["get", "count"], 0],
+    "rgba(0,0,0,0)",
+    t1, "#16a34a",
+    t2, "#ca8a04",
+    t3, "#ea580c",
+    t4, "#dc2626",
+  ];
+}
 
 export function H3Layer({ startDate, endDate }: Props) {
   const map = useMap();
@@ -52,9 +62,13 @@ export function H3Layer({ startDate, endDate }: Props) {
         (f.properties as { h3: string; count: number }).count = c;
       }
 
+      const color = colorForResolution(resolution);
       const source = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
       if (source) {
         source.setData(data);
+        if (map.getLayer(FILL_LAYER_ID)) {
+          map.setPaintProperty(FILL_LAYER_ID, "fill-color", color);
+        }
         return;
       }
       map.addSource(SOURCE_ID, { type: "geojson", data });
@@ -63,7 +77,7 @@ export function H3Layer({ startDate, endDate }: Props) {
         type: "fill",
         source: SOURCE_ID,
         paint: {
-          "fill-color": COUNT_COLOR,
+          "fill-color": color,
           "fill-opacity": 0.3,
         },
       });
