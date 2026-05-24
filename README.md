@@ -1,4 +1,35 @@
-# claude-hackaton-security
+# TerritorI.A.
+
+[Video de apresentaçao](https://drive.google.com/drive/folders/1QqMWTR7PxfxCDJf2UbKmQgBpXuTWT8Dh?usp=drive_link)
+
+O TerritoI.A.visa integrar a visualização de dados relacionados aos furtos no Rio de Janeiro em uma plataforma de diagnóstico e gerenciamento.
+Unindo parâmetros de localização a uma perspectiva temporal, o objetivo do TerritorI.A. é centralizar a tomada de decisão do CompStat em um só aplicativo.
+
+## Página de Priorização
+
+- Mapa interativo por áreas de prioridade e visualização de criminalidade em áreas adjacentes
+- Ranking de Prioridade (automática e editável manualmente)
+- Correlacionando dados quantitativos e qualitativos [que hoje são desintegrados]
+- Ações sugeridas para cada órgão competente por região (automática e editável manualmente)
+- Ações sugeridas para distribuição de agentes
+- Aviso de subnotificação (Alerta para regiões com discrepância entre BOs e denúncias com ações propostas específicas)
+- Exportar relatório
+
+## Página de Avaliação
+
+- Métrica de variabilidade dos índices
+- Visualização por semana (De acordo com a rotina da CompStat)
+- Comparação dos mapas - antigo e atual
+- Taxa de Resolução por Instituição
+
+## Possíveis Novas Funcionalidades
+
+- Implementação de mais parâmetros
+- Integração com os aplicativos da CompStat/Prefeitura
+- Enviar encaminhamentos diretamente para os órgãos competentes
+- Previsões mais sofisticadas
+
+
 
 ## How to run
 
