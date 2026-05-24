@@ -45,10 +45,12 @@ DEFAULT_WEIGHT = 1.0
 
 # How the three component scores combine into the final risk factor.
 # Must sum to 1.0 for the combined score to stay in [0, 100].
+# Ocorrência weight raised again (now 0.90); denuncia/camera scaled down
+# proportionally (3:2 ratio preserved) to keep the sum at 1.0.
 COMPONENT_WEIGHTS: dict[str, float] = {
-    "ocorrencia": 0.5,
-    "denuncia":   0.3,
-    "camera":     0.2,
+    "ocorrencia": 0.90,
+    "denuncia":   0.06,
+    "camera":     0.04,
 }
 
 
