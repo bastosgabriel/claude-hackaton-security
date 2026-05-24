@@ -84,8 +84,8 @@ export function CompStat() {
           <DiagnosticoView
             selected={selected}
             onToggleSelect={toggleSelect}
-            startDate="2026-05-27"
-            endDate="2026-06-02"
+            startDate="2020-01-01"
+            endDate="2026-01-01"
           />
         )}
         {view === "avaliacao" && <AvaliacaoView />}
@@ -104,7 +104,7 @@ export function CompStat() {
         message="Priorização confirmada · acompanhe em Semana atual"
       />
     </div>
-  )
+  );
 }
 
 function Tag({

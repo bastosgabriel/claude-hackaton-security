@@ -1,20 +1,15 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useEffect } from "react"
 import maplibregl, {
   type GeoJSONSource,
-  type LngLatBounds,
   type MapMouseEvent,
 } from "maplibre-gl"
 
-import {
-  searchOcorrencias,
-  type Ocorrencia,
-  type SearchResponse,
-} from "@/lib/api/ocorrencias"
+import { type Ocorrencia } from "@/lib/api/ocorrencias"
 
 import { useMap } from "./map-context"
+import { useOcorrenciasInViewport } from "./use-ocorrencias"
 
 const SOURCE_ID = "ocorrencias-source"
 const CIRCLE_LAYER_ID = "ocorrencias-circles"
@@ -22,29 +17,6 @@ const CIRCLE_LAYER_ID = "ocorrencias-circles"
 type Props = {
   startDate: string // YYYY-MM-DD
   endDate: string // YYYY-MM-DD
-}
-
-function boundsToPolygon(bounds: LngLatBounds): Array<[number, number]> {
-  const sw = bounds.getSouthWest()
-  const ne = bounds.getNorthEast()
-  // [lat, lng] per backend convention. Backend auto-closes the ring.
-  return [
-    [sw.lat, sw.lng],
-    [ne.lat, sw.lng],
-    [ne.lat, ne.lng],
-    [sw.lat, ne.lng],
-  ]
-}
-
-function roundPolygon(
-  polygon: Array<[number, number]>,
-  precision = 4,
-): Array<[number, number]> {
-  const factor = 10 ** precision
-  return polygon.map(([lat, lng]) => [
-    Math.round(lat * factor) / factor,
-    Math.round(lng * factor) / factor,
-  ])
 }
 
 function toGeoJSON(results: Ocorrencia[]): GeoJSON.FeatureCollection<
@@ -63,35 +35,7 @@ function toGeoJSON(results: Ocorrencia[]): GeoJSON.FeatureCollection<
 
 export function OcorrenciasLayer({ startDate, endDate }: Props) {
   const map = useMap()
-
-  // Track bounds in state so query key changes on each moveend.
-  const [polygon, setPolygon] = useState<Array<[number, number]> | null>(() => {
-    const b = map.getBounds()
-    return b ? roundPolygon(boundsToPolygon(b)) : null
-  })
-
-  useEffect(() => {
-    const update = () => {
-      const b = map.getBounds()
-      if (!b) return
-      setPolygon(roundPolygon(boundsToPolygon(b)))
-    }
-    update()
-    map.on("moveend", update)
-    return () => {
-      map.off("moveend", update)
-    }
-  }, [map])
-
-  const query = useQuery<SearchResponse>({
-    queryKey: ["ocorrencias", polygon, startDate, endDate],
-    enabled: !!polygon,
-    queryFn: ({ signal }) =>
-      searchOcorrencias(
-        { polygon: polygon!, start_date: startDate, end_date: endDate },
-        signal,
-      ),
-  })
+  const query = useOcorrenciasInViewport(startDate, endDate)
 
   // Push the latest results into the map source.
   useEffect(() => {

@@ -30,6 +30,7 @@ export function DiagnosticoView({
   const { initialView, writeViewportToUrl } = useViewportUrl()
   const [mapFilter, setMapFilter] = useState<(typeof MAP_FILTERS)[number]>("Score")
   const [openId, setOpenId] = useState<string | null>(REGIONS[0]?.id ?? null)
+  const [showPoints, setShowPoints] = useState(false)
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_460px]">
@@ -48,6 +49,15 @@ export function DiagnosticoView({
             </div>
           </div>
           <div className="flex items-center gap-1.5">
+            <label className="mr-1.5 flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-slate-600">
+              <input
+                type="checkbox"
+                checked={showPoints}
+                onChange={(e) => setShowPoints(e.target.checked)}
+                className="h-3.5 w-3.5 cursor-pointer accent-[#0a1729]"
+              />
+              Pontos
+            </label>
             {MAP_FILTERS.map((f) => (
               <button
                 key={f}
@@ -73,9 +83,11 @@ export function DiagnosticoView({
             Projeção 27 mai – 2 jun
           </div>
           <MapCanvas initialView={initialView} onMoveEnd={writeViewportToUrl}>
-            <H3Layer />
+            <H3Layer startDate={startDate} endDate={endDate} />
             <AreasLayer />
-            <OcorrenciasLayer startDate={startDate} endDate={endDate} />
+            {showPoints && (
+              <OcorrenciasLayer startDate={startDate} endDate={endDate} />
+            )}
           </MapCanvas>
           <div className="absolute bottom-3.5 left-3.5 z-10 flex flex-col gap-1.5 rounded-xl border border-slate-200 bg-white/95 px-3 py-2.5 text-[11px] shadow-sm backdrop-blur">
             <div className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">

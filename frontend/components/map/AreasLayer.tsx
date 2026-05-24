@@ -64,9 +64,9 @@ export function AreasLayer() {
           source: SOURCE_ID,
           paint: {
             "line-color": "#7f1d1d",
-            "line-width": 1.5,
+            "line-width": 3.5,
           },
-        })
+        });
         map.on("click", FILL_LAYER_ID, onClick)
         map.on("mouseenter", FILL_LAYER_ID, onEnter)
         map.on("mouseleave", FILL_LAYER_ID, onLeave)
