@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 
-import type { Region, RegionLevel } from "@/lib/compstat/regions"
+import type { Region, RegionLevel } from "@/lib/api/regions"
 
 import { RegionItem } from "./RegionItem"
 
@@ -10,10 +10,11 @@ type Filter = "todas" | "critico" | "alto"
 
 type Props = {
   regions: Region[]
-  selected: ReadonlySet<string>
-  openId: string | null
-  onToggleOpen: (id: string) => void
-  onToggleSelect: (id: string) => void
+  isLoading: boolean
+  selected: ReadonlySet<number>
+  openId: number | null
+  onToggleOpen: (id: number) => void
+  onToggleSelect: (id: number) => void
 }
 
 const FILTER_LEVELS: Record<Filter, RegionLevel[] | null> = {
@@ -24,6 +25,7 @@ const FILTER_LEVELS: Record<Filter, RegionLevel[] | null> = {
 
 export function RegionList({
   regions,
+  isLoading,
   selected,
   openId,
   onToggleOpen,
@@ -47,7 +49,7 @@ export function RegionList({
             Ranking de prioridade
           </div>
           <div className="mt-0.5 text-[12px] text-slate-600">
-            {regions.length} regiões com score ≥ 50 · ordenadas por urgência
+            {regions.length} regiões · ordenadas por score
           </div>
         </div>
       </div>
@@ -76,18 +78,24 @@ export function RegionList({
       </div>
 
       <div className="overflow-y-auto p-2">
-        {filtered.map((region, idx) => (
-          <RegionItem
-            key={region.id}
-            region={region}
-            rank={regions.indexOf(region) + 1}
-            isOpen={openId === region.id}
-            isSelected={selected.has(region.id)}
-            onToggleOpen={onToggleOpen}
-            onToggleSelect={onToggleSelect}
-          />
-        ))}
-        {filtered.length === 0 && (
+        {isLoading && regions.length === 0 && (
+          <div className="px-4 py-8 text-center text-[12.5px] text-slate-500">
+            Carregando regiões…
+          </div>
+        )}
+        {!isLoading &&
+          filtered.map((region) => (
+            <RegionItem
+              key={region.id}
+              region={region}
+              rank={regions.indexOf(region) + 1}
+              isOpen={openId === region.id}
+              isSelected={selected.has(region.id)}
+              onToggleOpen={onToggleOpen}
+              onToggleSelect={onToggleSelect}
+            />
+          ))}
+        {!isLoading && filtered.length === 0 && (
           <div className="px-4 py-8 text-center text-[12.5px] text-slate-500">
             Nenhuma região no filtro selecionado.
           </div>

@@ -1,5 +1,12 @@
 "use client"
 
+import { AreasLayer } from "@/components/map/AreasLayer"
+import { H3Layer } from "@/components/map/H3Layer"
+import { MapCanvas } from "@/components/map/MapCanvas"
+import { INITIAL_CENTER, INITIAL_ZOOM } from "@/lib/map-config"
+
+const SNAPSHOT_VIEW = { center: INITIAL_CENTER, zoom: INITIAL_ZOOM }
+
 type Delta = {
   label: string
   value: string
@@ -33,17 +40,19 @@ const TIMELINE: { date: string; text: React.ReactNode }[] = [
 export function AvaliacaoView() {
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_420px]">
-      {/* Stacked snapshot panels (placeholders — real before/after maps tbd) */}
+      {/* Stacked before/after maps */}
       <div className="grid h-[560px] grid-rows-2 gap-3.5">
         <SnapshotPanel
           stampClass="bg-orange-700/90"
-          stampLabel="Antes · 13 mai · 08h00 · Snapshot"
-          subtitle="Score inicial · 92 (Crítico)"
+          stampLabel="Antes · jan–dez 2023 · Snapshot"
+          startDate="2023-01-01"
+          endDate="2023-12-31"
         />
         <SnapshotPanel
           stampClass="bg-red-600/90"
-          stampLabel="● Atual · 24 mai · 14h32 · Real time"
-          subtitle="Score atual · 64 (Médio)"
+          stampLabel="● Atual · jan–dez 2024 · Real time"
+          startDate="2024-01-01"
+          endDate="2024-12-31"
         />
       </div>
 
@@ -154,24 +163,27 @@ export function AvaliacaoView() {
 function SnapshotPanel({
   stampClass,
   stampLabel,
-  subtitle,
+  startDate,
+  endDate,
 }: {
   stampClass: string
   stampLabel: string
-  subtitle: string
+  startDate: string
+  endDate: string
 }) {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-b from-blue-50 to-blue-100">
+      <MapCanvas initialView={SNAPSHOT_VIEW}>
+        <H3Layer startDate={startDate} endDate={endDate} />
+        <AreasLayer startDate={startDate} endDate={endDate} />
+      </MapCanvas>
       <div
         className={
-          "absolute left-2.5 top-2.5 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white " +
+          "pointer-events-none absolute left-2.5 top-2.5 z-10 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white " +
           stampClass
         }
       >
         {stampLabel}
-      </div>
-      <div className="flex h-full items-center justify-center text-[12px] text-slate-500">
-        {subtitle}
       </div>
     </div>
   )

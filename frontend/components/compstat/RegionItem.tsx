@@ -1,19 +1,20 @@
 "use client"
 
 import {
-  LEVEL_LABEL,
   type Region,
-  type RegionActionIcon,
+  type RegionActionKind,
+  type RegionCriterionKey,
   type RegionLevel,
-} from "@/lib/compstat/regions"
+} from "@/lib/api/regions"
+import { LEVEL_COLOR, LEVEL_LABEL } from "@/lib/compstat/regions"
 
 type Props = {
   region: Region
   rank: number
   isOpen: boolean
   isSelected: boolean
-  onToggleOpen: (id: string) => void
-  onToggleSelect: (id: string) => void
+  onToggleOpen: (id: number) => void
+  onToggleSelect: (id: number) => void
 }
 
 const SCORE_NUM_CLASS: Record<RegionLevel, string> = {
@@ -36,7 +37,21 @@ const RANK_CLASS: Record<number, string> = {
   3: "bg-orange-500 text-white border-orange-500",
 }
 
-const ACTION_ICO_CLASS: Record<RegionActionIcon, string> = {
+const CRITERION_ICON: Record<RegionCriterionKey, string> = {
+  roubos_7d: "🚨",
+  disque_denuncia: "📞",
+  fatores_ambientais: "💡",
+  relints_ativos: "📄",
+  historico_4s: "📈",
+}
+
+const ACTION_ICON: Record<RegionActionKind, string> = {
+  amb: "💡",
+  pol: "👮",
+  int: "🎯",
+}
+
+const ACTION_ICO_CLASS: Record<RegionActionKind, string> = {
   amb: "bg-green-100 text-green-700",
   pol: "bg-blue-100 text-blue-700",
   int: "bg-yellow-100 text-yellow-700",
@@ -75,7 +90,7 @@ export function RegionItem({
         <div>
           <div className="text-sm font-semibold text-slate-900">{region.name}</div>
           <div className="mt-0.5 flex flex-wrap gap-2.5 text-[12px] text-slate-600">
-            <span>{region.aisp}</span>
+            <span>{region.aisp || "—"}</span>
             <span>•</span>
             <span>{region.roubos} roubos</span>
             <span>•</span>
@@ -99,69 +114,77 @@ export function RegionItem({
 
       {isOpen && (
         <div className="border-t border-slate-200 bg-slate-50 px-3.5 pb-3.5">
-          <SectionTitle>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 8v4M12 16h.01" />
-            </svg>
-            Por que esse score?
-          </SectionTitle>
-          <div
-            className="rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-[12.5px] leading-relaxed text-slate-600 [&_strong]:font-semibold [&_strong]:text-slate-900"
-            dangerouslySetInnerHTML={{ __html: region.narrative }}
-          />
+          {region.narrative && (
+            <>
+              <SectionTitle>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 8v4M12 16h.01" />
+                </svg>
+                Por que esse score?
+              </SectionTitle>
+              <div
+                className="rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-[12.5px] leading-relaxed text-slate-600 [&_strong]:font-semibold [&_strong]:text-slate-900"
+                dangerouslySetInnerHTML={{ __html: region.narrative }}
+              />
+            </>
+          )}
 
           <SectionTitle>Critérios ({region.criteria.length})</SectionTitle>
           <div className="flex flex-col gap-2">
             {region.criteria.map((c) => (
               <div
-                key={c.label}
+                key={c.key}
                 className="grid grid-cols-[1fr_80px_38px] items-center gap-2.5 text-[12.5px]"
               >
                 <div className="flex items-center gap-2 text-slate-900">
                   <span className="grid h-[22px] w-[22px] place-items-center rounded-md border border-slate-200 bg-white">
-                    {c.icon}
+                    {CRITERION_ICON[c.key]}
                   </span>
                   {c.label}
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full border border-slate-200 bg-white">
                   <div
                     className="h-full rounded-full"
-                    style={{ width: `${c.pct}%`, background: c.color }}
+                    style={{ width: `${c.pct}%`, background: LEVEL_COLOR[c.level] }}
                   />
                 </div>
                 <div className="text-right font-mono text-[12px] font-bold text-slate-600">
-                  {c.val}
+                  {c.value}
                 </div>
               </div>
             ))}
           </div>
 
-          <SectionTitle>Ações sugeridas ({region.actions.length})</SectionTitle>
-          <div className="flex flex-col gap-1.5">
-            {region.actions.map((a) => (
-              <div
-                key={a.title}
-                className="flex items-start gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-[12.5px]"
-              >
-                <div
-                  className={
-                    "grid h-7 w-7 flex-shrink-0 place-items-center rounded-md text-base " +
-                    ACTION_ICO_CLASS[a.ico]
-                  }
-                >
-                  {a.icon}
-                </div>
-                <div className="flex-1 text-slate-900">
-                  <strong className="mb-0.5 block font-semibold">{a.title}</strong>
-                  <span className="text-slate-600">{a.desc}</span>
-                </div>
-                <div className="whitespace-nowrap text-right text-[11px] font-semibold text-slate-400">
-                  {a.cost}
-                </div>
+          {region.actions.length > 0 && (
+            <>
+              <SectionTitle>Ações sugeridas ({region.actions.length})</SectionTitle>
+              <div className="flex flex-col gap-1.5">
+                {region.actions.map((a) => (
+                  <div
+                    key={a.title}
+                    className="flex items-start gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-[12.5px]"
+                  >
+                    <div
+                      className={
+                        "grid h-7 w-7 flex-shrink-0 place-items-center rounded-md text-base " +
+                        ACTION_ICO_CLASS[a.kind]
+                      }
+                    >
+                      {ACTION_ICON[a.kind]}
+                    </div>
+                    <div className="flex-1 text-slate-900">
+                      <strong className="mb-0.5 block font-semibold">{a.title}</strong>
+                      <span className="text-slate-600">{a.desc}</span>
+                    </div>
+                    <div className="whitespace-nowrap text-right text-[11px] font-semibold text-slate-400">
+                      {a.cost_label}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
 
           <div className="mt-3.5 flex gap-2">
             <button
