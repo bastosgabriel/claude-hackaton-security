@@ -6,7 +6,7 @@
 > O vídeo de apresentação é apenas um mockup para visualização das funcionalidades, por favor explorem o site para interagirem com a UX atualizada.
 
 
-O TerritoI.A.visa integrar a visualização de dados relacionados aos furtos no Rio de Janeiro em uma plataforma de diagnóstico e gerenciamento.
+O Territor IA visa integrar a visualização de dados relacionados aos furtos no Rio de Janeiro em uma plataforma de diagnóstico e gerenciamento.
 Unindo parâmetros de localização a uma perspectiva temporal, o objetivo do TerritorI.A. é centralizar a tomada de decisão do CompStat em um só aplicativo.
 
 - Interpolação
