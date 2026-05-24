@@ -2,21 +2,24 @@
 
 import { useEffect, useRef, useState } from "react"
 
-import { useViewportUrl } from "@/hooks/use-viewport-url"
 import { AreasLayer } from "@/components/map/AreasLayer"
 import { H3Layer } from "@/components/map/H3Layer"
 import { MapCanvas } from "@/components/map/MapCanvas"
 import { OcorrenciasLayer } from "@/components/map/OcorrenciasLayer"
 import type { Region } from "@/lib/api/regions"
+import { INITIAL_CENTER, INITIAL_ZOOM } from "@/lib/map-config"
 
 import { RegionList } from "./RegionList"
 
-type MapLayer = "h3" | "areas"
+type MapLayer = "h3" | "areas" | "pontos"
 
 const MAP_LAYERS: { key: MapLayer; label: string }[] = [
   { key: "h3", label: "Ocorrências" },
   { key: "areas", label: "Áreas da FM" },
+  { key: "pontos", label: "Pontos" },
 ]
+
+const MAP_INITIAL_VIEW = { center: INITIAL_CENTER, zoom: INITIAL_ZOOM }
 
 type Props = {
   regions: Region[]
@@ -36,13 +39,11 @@ export function DiagnosticoView({
   startDate,
   endDate,
 }: Props) {
-  const { initialView, writeViewportToUrl } = useViewportUrl()
   const [activeLayers, setActiveLayers] = useState<ReadonlySet<MapLayer>>(
     () => new Set<MapLayer>(["h3", "areas"]),
   )
   const [openId, setOpenId] = useState<number | null>(null)
   const autoOpened = useRef(false)
-  const [showPoints, setShowPoints] = useState(false)
 
   // Auto-open the top-ranked region the first time data arrives. After the
   // user closes it, leave it closed — don't re-open on refetch.
@@ -79,15 +80,6 @@ export function DiagnosticoView({
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <label className="mr-1.5 flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-slate-600">
-              <input
-                type="checkbox"
-                checked={showPoints}
-                onChange={(e) => setShowPoints(e.target.checked)}
-                className="h-3.5 w-3.5 cursor-pointer accent-[#0a1729]"
-              />
-              Pontos
-            </label>
             {MAP_LAYERS.map(({ key, label }) => {
               const active = activeLayers.has(key)
               return (
@@ -116,14 +108,14 @@ export function DiagnosticoView({
             </svg>
             Projeção 27 mai – 2 jun
           </div>
-          <MapCanvas initialView={initialView} onMoveEnd={writeViewportToUrl}>
+          <MapCanvas initialView={MAP_INITIAL_VIEW}>
             {activeLayers.has("h3") && (
               <H3Layer startDate={startDate} endDate={endDate} />
             )}
             {activeLayers.has("areas") && (
               <AreasLayer startDate={startDate} endDate={endDate} />
             )}
-            {showPoints && (
+            {activeLayers.has("pontos") && (
               <OcorrenciasLayer startDate={startDate} endDate={endDate} />
             )}
           </MapCanvas>

@@ -2,16 +2,34 @@
 
 [Video de apresentaçao](https://drive.google.com/drive/folders/1QqMWTR7PxfxCDJf2UbKmQgBpXuTWT8Dh?usp=drive_link)
 
+> ![NOTE]
+> O vídeo de apresentação é apenas um mockup para visualização das funcionalidades, por favor explorem o site para interagirem com a UX atualizada.
+
+
 O TerritoI.A.visa integrar a visualização de dados relacionados aos furtos no Rio de Janeiro em uma plataforma de diagnóstico e gerenciamento.
 Unindo parâmetros de localização a uma perspectiva temporal, o objetivo do TerritorI.A. é centralizar a tomada de decisão do CompStat em um só aplicativo.
 
+- Interpolação
+- Diagnóstico
+- Priorização
+- Gerenciamento
+- Previsão
+
+# Objetivos
+
+- Melhor visualização
+- Diagnósticos e Insights automáticos
+- Comparação automática entre diagnósticos
+- Acompanhamento de diagnósticos anteriores
+
+# FUNCIONALIDADES
 ## Página de Priorização
 
 - Mapa interativo por áreas de prioridade e visualização de criminalidade em áreas adjacentes
 - Ranking de Prioridade (automática e editável manualmente)
-- Correlacionando dados quantitativos e qualitativos [que hoje são desintegrados]
-- Ações sugeridas para cada órgão competente por região (automática e editável manualmente)
-- Ações sugeridas para distribuição de agentes
+- correlacionando dados quantitativos e qualitativos [que hoje são desintegrados]
+- ações sugeridas para cada órgão competente por região (automática e editável manualmente)
+- ações sugeridas para distribuição de agentes
 - Aviso de subnotificação (Alerta para regiões com discrepância entre BOs e denúncias com ações propostas específicas)
 - Exportar relatório
 
@@ -28,8 +46,6 @@ Unindo parâmetros de localização a uma perspectiva temporal, o objetivo do Te
 - Integração com os aplicativos da CompStat/Prefeitura
 - Enviar encaminhamentos diretamente para os órgãos competentes
 - Previsões mais sofisticadas
-
-
 
 ## How to run
 

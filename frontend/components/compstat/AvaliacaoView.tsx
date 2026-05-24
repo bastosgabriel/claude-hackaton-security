@@ -12,11 +12,12 @@ import { INITIAL_CENTER, INITIAL_ZOOM } from "@/lib/map-config"
 
 const SNAPSHOT_VIEW = { center: INITIAL_CENTER, zoom: INITIAL_ZOOM }
 
-type MapLayer = "h3" | "areas"
+type MapLayer = "h3" | "areas" | "pontos"
 
 const MAP_LAYERS: { key: MapLayer; label: string }[] = [
   { key: "h3", label: "Ocorrências" },
   { key: "areas", label: "Áreas da FM" },
+  { key: "pontos", label: "Pontos" },
 ]
 
 type Delta = {
@@ -53,7 +54,6 @@ export function AvaliacaoView() {
   const [activeLayers, setActiveLayers] = useState<ReadonlySet<MapLayer>>(
     () => new Set<MapLayer>(["h3", "areas"]),
   )
-  const [showPoints, setShowPoints] = useState(false)
 
   const toggleLayer = (key: MapLayer) => {
     setActiveLayers((prev) => {
@@ -96,17 +96,8 @@ export function AvaliacaoView() {
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_420px]">
       {/* Filter bar + stacked before/after maps */}
-      <div className="grid h-[560px] grid-rows-[auto_1fr_1fr] gap-3.5">
+      <div className="grid h-full min-h-[560px] grid-rows-[auto_1fr_1fr] gap-3.5">
         <div className="flex flex-wrap items-center justify-end gap-1.5 rounded-2xl border border-slate-200 bg-white px-4.5 py-2 shadow-sm">
-          <label className="mr-1.5 flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-slate-600">
-            <input
-              type="checkbox"
-              checked={showPoints}
-              onChange={(e) => setShowPoints(e.target.checked)}
-              className="h-3.5 w-3.5 cursor-pointer accent-[#0a1729]"
-            />
-            Pontos
-          </label>
           {MAP_LAYERS.map(({ key, label }) => {
             const active = activeLayers.has(key)
             return (
@@ -133,7 +124,6 @@ export function AvaliacaoView() {
           startDate="2023-01-01"
           endDate="2023-12-31"
           activeLayers={activeLayers}
-          showPoints={showPoints}
           registerMap={registerMap}
         />
         <SnapshotPanel
@@ -142,7 +132,6 @@ export function AvaliacaoView() {
           startDate="2024-01-01"
           endDate="2024-12-31"
           activeLayers={activeLayers}
-          showPoints={showPoints}
           registerMap={registerMap}
         />
       </div>
@@ -257,7 +246,6 @@ function SnapshotPanel({
   startDate,
   endDate,
   activeLayers,
-  showPoints,
   registerMap,
 }: {
   stampClass: string
@@ -265,7 +253,6 @@ function SnapshotPanel({
   startDate: string
   endDate: string
   activeLayers: ReadonlySet<MapLayer>
-  showPoints: boolean
   registerMap: (m: MaplibreMap) => void | (() => void)
 }) {
   return (
@@ -278,7 +265,7 @@ function SnapshotPanel({
         {activeLayers.has("areas") && (
           <AreasLayer startDate={startDate} endDate={endDate} />
         )}
-        {showPoints && (
+        {activeLayers.has("pontos") && (
           <OcorrenciasLayer startDate={startDate} endDate={endDate} />
         )}
       </MapCanvas>
