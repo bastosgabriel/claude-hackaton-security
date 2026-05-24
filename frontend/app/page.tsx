@@ -1,11 +1,11 @@
 import { Suspense } from "react"
 
-import { MapView } from "@/components/MapView"
+import { CompStat } from "@/components/compstat/CompStat"
 
 export default function Home() {
   return (
     <Suspense fallback={null}>
-      <MapView />
+      <CompStat />
     </Suspense>
   )
 }
