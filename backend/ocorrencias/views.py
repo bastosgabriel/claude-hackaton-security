@@ -11,7 +11,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Ocorrencia
-from .serializers import OcorrenciaSerializer, SearchRequestSerializer
+from .scoring import CRIME_WEIGHTS, compute_scores
+from .serializers import (
+    AreaForcaScoreQuerySerializer,
+    AreaForcaScoreSerializer,
+    OcorrenciaSerializer,
+    SearchRequestSerializer,
+)
 
 
 class OcorrenciaSearchView(APIView):
@@ -84,6 +90,31 @@ class OcorrenciaSearchView(APIView):
                     "total_pages": total_pages,
                 },
                 "results": results,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class AreaForcaScoreListView(APIView):
+    """GET /api/areas-forca/scores/?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
+
+    Returns a risk score (0-100) for each Área de Força polygon based on the
+    weighted density of Ocorrencias inside it during the optional date window.
+    """
+
+    def get(self, request):
+        q = AreaForcaScoreQuerySerializer(data=request.query_params)
+        q.is_valid(raise_exception=True)
+        v = q.validated_data
+        scored = compute_scores(start_date=v["start_date"], end_date=v["end_date"])
+        return Response(
+            {
+                "date_range": {
+                    "start_date": v["start_date"].isoformat(),
+                    "end_date":   v["end_date"].isoformat(),
+                },
+                "weights": CRIME_WEIGHTS,
+                "results": AreaForcaScoreSerializer(scored, many=True).data,
             },
             status=status.HTTP_200_OK,
         )

@@ -109,6 +109,23 @@ class DiskDenuncia(models.Model):
         return f"{self.numero_denuncia} — {self.tipo} ({self.bairro_logradouro})"
 
 
+class AreaForca(models.Model):
+    """Municipal "área de força" polygons from `sh_area_forca/areas_forca_municipal.shp`.
+
+    Each row is one priority public-safety zone. `area_km2` is precomputed by
+    the loader (reprojected to SIRGAS 2000 / UTM 23S, EPSG:31983) so the
+    scorer doesn't have to reproject at query time.
+    """
+
+    fid = models.IntegerField(primary_key=True)
+    nome_subar = models.CharField(max_length=255, db_index=True)
+    area_km2 = models.FloatField()
+    geometry = gismodels.PolygonField(srid=4326, spatial_index=True)
+
+    def __str__(self) -> str:
+        return f"[fid {self.fid}] {self.nome_subar}"
+
+
 class FatorUrbano(models.Model):
     """Urban-factor survey responses from `fatores_urbanos.csv`.
 

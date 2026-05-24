@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 
 from django.contrib.gis.geos import GEOSGeometry, Polygon
 from rest_framework import serializers
@@ -85,3 +86,41 @@ class OcorrenciaSerializer(serializers.Serializer):
 
     def get_lng(self, obj) -> float:
         return obj.location.x
+
+
+class AreaForcaScoreSerializer(serializers.Serializer):
+    """Output shape for one polygon's risk score."""
+
+    fid = serializers.IntegerField()
+    nome_subar = serializers.CharField()
+    area_km2 = serializers.FloatField()
+    geometry = serializers.SerializerMethodField()
+    occurrence_count = serializers.IntegerField()
+    weighted_count = serializers.FloatField()
+    density = serializers.FloatField()
+    score = serializers.FloatField()
+    score_raw = serializers.FloatField()
+    by_desc_delito = serializers.ListField(child=serializers.DictField())
+    by_year = serializers.ListField(child=serializers.DictField())
+
+    def get_geometry(self, obj) -> dict:
+        return json.loads(obj["geometry"].geojson)
+
+
+class AreaForcaScoreQuerySerializer(serializers.Serializer):
+    """Validates the optional date window for the score endpoint."""
+
+    start_date = serializers.DateField(required=False, default=DATE_MIN)
+    end_date = serializers.DateField(required=False)
+
+    def validate(self, attrs):
+        today = dt.date.today()
+        end = attrs.get("end_date") or today
+        attrs["end_date"] = end
+        if attrs["start_date"] > end:
+            raise serializers.ValidationError("start_date must be <= end_date")
+        if attrs["start_date"] < DATE_MIN or end > today:
+            raise serializers.ValidationError(
+                f"dates must lie within [{DATE_MIN.isoformat()}, {today.isoformat()}]"
+            )
+        return attrs

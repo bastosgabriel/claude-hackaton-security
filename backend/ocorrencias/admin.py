@@ -1,6 +1,6 @@
 from django.contrib.gis import admin
 
-from .models import Camera, DiskDenuncia, FatorUrbano, Ocorrencia
+from .models import AreaForca, Camera, DiskDenuncia, FatorUrbano, Ocorrencia
 
 
 @admin.register(Ocorrencia)
@@ -28,6 +28,13 @@ class DiskDenunciaAdmin(admin.GISModelAdmin):
     list_filter = ("classe", "status_denuncia", "orgao_tipo", "bairro_logradouro")
     search_fields = ("numero_denuncia", "logradouro", "bairro_logradouro")
     readonly_fields = ("id_denuncia", "numero_denuncia")
+
+
+@admin.register(AreaForca)
+class AreaForcaAdmin(admin.GISModelAdmin):
+    list_display = ("fid", "nome_subar", "area_km2")
+    search_fields = ("nome_subar",)
+    readonly_fields = ("fid", "area_km2")
 
 
 @admin.register(FatorUrbano)

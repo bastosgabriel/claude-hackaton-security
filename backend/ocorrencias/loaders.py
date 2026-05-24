@@ -17,7 +17,7 @@ from django.contrib.gis.geos import GEOSGeometry, Point
 from django.db import transaction
 from django.utils.timezone import is_naive, make_aware
 
-from .models import Camera, DiskDenuncia, FatorUrbano, Ocorrencia
+from .models import AreaForca, Camera, DiskDenuncia, FatorUrbano, Ocorrencia
 
 ReportFn = Callable[[str], None]
 _NOOP: ReportFn = lambda msg: None
@@ -450,6 +450,80 @@ def load_fatores_urbanos(
 
 
 # --------------------------------------------------------------------------
+# Áreas de força (shapefile)
+# --------------------------------------------------------------------------
+
+# SIRGAS 2000 / UTM 23S — same metric CRS used elsewhere in the repo
+# (visualize_areas_forca.py, print_geo_areas_forca.py) for km² computation.
+AREAS_FORCA_METRIC_EPSG = 31983
+
+
+def load_areas_forca(
+    shp_path: str | Path,
+    *,
+    truncate: bool = False,
+    limit: int | None = None,
+    report: ReportFn = _NOOP,
+) -> dict[str, int]:
+    import geopandas as gpd  # local: only needed for this loader
+
+    path = _resolve(shp_path)
+    if truncate:
+        n = AreaForca.objects.count()
+        AreaForca.objects.all().delete()
+        report(f"  truncated {n} areas_forca rows")
+
+    stats = {"read": 0, "imported": 0, "skipped_no_fid": 0, "skipped_bad_geom": 0}
+    # reset_index keeps the loop's positional `i` aligned with both the WGS84
+    # and the metric GeoDataFrames regardless of the shapefile's own FID.
+    gdf = gpd.read_file(path).to_crs(epsg=4326).reset_index(drop=True)
+    gdf_m = gdf.to_crs(epsg=AREAS_FORCA_METRIC_EPSG)
+
+    objs: list[AreaForca] = []
+    for i, row in gdf.iterrows():
+        stats["read"] += 1
+        fid = safe_int(row.get("fid"))
+        if fid is None:
+            stats["skipped_no_fid"] += 1
+            if limit is not None and stats["read"] >= limit:
+                break
+            continue
+        geom = row.geometry
+        if geom is None or geom.is_empty or not geom.is_valid:
+            stats["skipped_bad_geom"] += 1
+            if limit is not None and stats["read"] >= limit:
+                break
+            continue
+        # Force a single Polygon (shapefile is all Polygon; if a feature is
+        # MultiPolygon, fall back to the largest part).
+        if geom.geom_type == "MultiPolygon":
+            geom = max(geom.geoms, key=lambda g: g.area)
+        try:
+            poly = GEOSGeometry(geom.wkt, srid=4326)
+        except Exception:
+            stats["skipped_bad_geom"] += 1
+            if limit is not None and stats["read"] >= limit:
+                break
+            continue
+        area_km2 = float(gdf_m.geometry.loc[i].area) / 1_000_000.0
+        objs.append(AreaForca(
+            fid=fid,
+            nome_subar=safe_str(row.get("nome_subar"), 255),
+            area_km2=area_km2,
+            geometry=poly,
+        ))
+        if limit is not None and stats["read"] >= limit:
+            break
+    if objs:
+        with transaction.atomic():
+            AreaForca.objects.bulk_create(objs, batch_size=100, ignore_conflicts=True)
+        stats["imported"] = len(objs)
+    report(f"  loaded {stats['imported']} polygons from {path.name}")
+    stats["rows_in_db"] = AreaForca.objects.count()
+    return stats
+
+
+# --------------------------------------------------------------------------
 # Registry: declared order is the load order.
 # --------------------------------------------------------------------------
 
@@ -458,4 +532,5 @@ DATASETS: dict[str, tuple[str, Callable[..., dict[str, int]]]] = {
     "cameras":         ("cameras_areas_fm.csv",                      load_cameras),
     "disk_denuncia":   ("disk_denuncia.csv",                         load_disk_denuncia),
     "fatores_urbanos": ("fatores_urbanos.csv",                       load_fatores_urbanos),
+    "areas_forca":     ("sh_area_forca/areas_forca_municipal.shp",   load_areas_forca),
 }
