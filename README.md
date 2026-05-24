@@ -2,7 +2,7 @@
 
 [Video de apresentaçao](https://drive.google.com/drive/folders/1QqMWTR7PxfxCDJf2UbKmQgBpXuTWT8Dh?usp=drive_link)
 
-> ![NOTE]
+> [!NOTE]
 > O vídeo de apresentação é apenas um mockup para visualização das funcionalidades, por favor explorem o site para interagirem com a UX atualizada.
 
 
